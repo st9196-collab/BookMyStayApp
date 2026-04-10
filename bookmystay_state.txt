@@ -1,0 +1,4 @@
+INVENTORY
+Single:-1
+RESERVATIONS
+RES105,Alice,Single
