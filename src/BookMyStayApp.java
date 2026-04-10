@@ -1,79 +1,109 @@
-/**
- * UseCase3InventorySetup
- *
- * This class demonstrates centralized room inventory management
- * using a HashMap as a single source of truth.
- *
- * It replaces scattered availability variables with a scalable,
- * maintainable structure.
- *
- * @author YourName
- * @version 3.1
- */
+import java.util.*;
 
-import java.util.HashMap;
-import java.util.Map;
+// Domain Model: Room
+class Room {
+    private String type;
+    private double price;
+    private List<String> amenities;
 
-// Inventory Management Class
-class RoomInventory {
-
-    // HashMap to store room type and availability
-    private Map<String, Integer> inventory;
-
-    // Constructor initializes inventory
-    public RoomInventory() {
-        inventory = new HashMap<>();
-
-        // Initialize room availability
-        inventory.put("Single Room", 5);
-        inventory.put("Double Room", 3);
-        inventory.put("Suite Room", 2);
+    public Room(String type, double price, List<String> amenities) {
+        this.type = type;
+        this.price = price;
+        this.amenities = amenities;
     }
 
-    // Get availability of a specific room type
-    public int getAvailability(String roomType) {
-        return inventory.getOrDefault(roomType, 0);
+    public String getType() {
+        return type;
     }
 
-    // Update availability (add or reduce rooms)
-    public void updateAvailability(String roomType, int countChange) {
-        int current = inventory.getOrDefault(roomType, 0);
-        inventory.put(roomType, current + countChange);
+    public double getPrice() {
+        return price;
     }
 
-    // Display full inventory
-    public void displayInventory() {
-        System.out.println("\n--- Current Room Inventory ---");
-        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
+    public List<String> getAmenities() {
+        return amenities;
+    }
+
+    public void displayDetails() {
+        System.out.println("Room Type: " + type);
+        System.out.println("Price: ₹" + price);
+        System.out.println("Amenities: " + String.join(", ", amenities));
+        System.out.println("---------------------------");
+    }
+}
+
+// Inventory: Holds availability (STATE HOLDER)
+class Inventory {
+    private Map<String, Integer> availabilityMap = new HashMap<>();
+
+    public void addRoom(String type, int count) {
+        availabilityMap.put(type, count);
+    }
+
+    // Read-only access
+    public int getAvailability(String type) {
+        return availabilityMap.getOrDefault(type, 0);
+    }
+
+    public Map<String, Integer> getAllAvailability() {
+        return Collections.unmodifiableMap(availabilityMap); // Defensive programming
+    }
+}
+
+// Service: Search (READ-ONLY)
+class SearchService {
+
+    public static void searchAvailableRooms(Inventory inventory, Map<String, Room> roomCatalog) {
+        System.out.println("Available Rooms:\n");
+
+        Map<String, Integer> availability = inventory.getAllAvailability();
+
+        for (String roomType : availability.keySet()) {
+
+            int count = availability.get(roomType);
+
+            // Validation Logic: Only show available rooms
+            if (count > 0) {
+
+                Room room = roomCatalog.get(roomType);
+
+                if (room != null) { // Defensive check
+                    room.displayDetails();
+                    System.out.println("Available Count: " + count);
+                    System.out.println("===========================");
+                }
+            }
         }
     }
 }
 
-// Main Application Class
-public class UseCase3InventorySetup {
+// Main Class
+public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        System.out.println("======================================");
-        System.out.println("   Book My Stay App - Version 3.1");
-        System.out.println("======================================");
+        // Step 1: Create Room Catalog (Domain Layer)
+        Map<String, Room> roomCatalog = new HashMap<>();
 
-        // Initialize inventory
-        RoomInventory inventory = new RoomInventory();
+        roomCatalog.put("Single",
+                new Room("Single", 2000,
+                        Arrays.asList("WiFi", "TV", "AC")));
 
-        // Display initial inventory
-        inventory.displayInventory();
+        roomCatalog.put("Double",
+                new Room("Double", 3500,
+                        Arrays.asList("WiFi", "TV", "AC", "Mini Bar")));
 
-        // Simulate updates
-        System.out.println("\nUpdating inventory...");
+        roomCatalog.put("Suite",
+                new Room("Suite", 6000,
+                        Arrays.asList("WiFi", "TV", "AC", "Mini Bar", "Jacuzzi")));
 
-        inventory.updateAvailability("Single Room", -1); // booking
-        inventory.updateAvailability("Suite Room", +1);  // cancellation
+        // Step 2: Setup Inventory (STATE)
+        Inventory inventory = new Inventory();
+        inventory.addRoom("Single", 5);
+        inventory.addRoom("Double", 0); // Should NOT appear
+        inventory.addRoom("Suite", 2);
 
-        // Display updated inventory
-        inventory.displayInventory();
-
-        System.out.println("\nApplication finished.");
+        // Step 3: Guest triggers search (READ-ONLY OPERATION)
+        SearchService.searchAvailableRooms(inventory, roomCatalog);
     }
 }
